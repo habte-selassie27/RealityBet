@@ -1,0 +1,66 @@
+{
+  "note": "Read-only state capture from the deployed contract. Every value is the literal output of the listed genlayer command; nothing was written to the chain.",
+  "network": "studionet",
+  "contract_address": "0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177",
+  "captured_at": "2026-09-28T13:55:31Z",
+  "reads": {
+    "get_platform_stats": {
+      "command": "genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_platform_stats",
+      "exit_code": 0,
+      "result": {
+        "fee_bps": 150,
+        "owner": "0x04e0353B7218b66D6803725ce7342E6e1225DB1b",
+        "total_markets": 1,
+        "total_volume": 0
+      }
+    },
+    "get_market_ids(0, 10)": {
+      "command": "genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_market_ids --args 0 10",
+      "exit_code": 0,
+      "result": [
+        "m0-1790603379"
+      ]
+    },
+    "get_markets_page(0, 10)": {
+      "command": "genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_markets_page --args 0 10",
+      "exit_code": 0,
+      "result": [
+        {
+          "categories": [
+            "tech"
+          ],
+          "category": "tech",
+          "close_time": 1790603950,
+          "creator": "0x5B3661C576c7001e6d6279C67F3779705d334c89",
+          "description": "Resolves YES if https://explorer-studio.genlayer.com returns a working page.",
+          "fee_bps": 150,
+          "id": "m0-1790603379",
+          "outcome": "",
+          "pool_no": 0,
+          "pool_yes": 0,
+          "resolution_url": "https://explorer-studio.genlayer.com",
+          "resolve_time": 1790604550,
+          "resolved_at": 0,
+          "resolver_confidence": "",
+          "resolver_note": "",
+          "resolver_sources": "",
+          "status": "open",
+          "title": "Will the GenLayer Studio explorer load without error?"
+        }
+      ]
+    }
+  },
+  "expected_revert": {
+    "command": "genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_market --args m-does-not-exist",
+    "exit_code": 1,
+    "decoded_error": "Market not found",
+    "note": "CLI error output also embeds node_config (including a validator private key); it is deliberately not reproduced here."
+  },
+  "cli_account_context": {
+    "command": "genlayer account show",
+    "name": "rabby",
+    "status": "unlocked",
+    "active": true,
+    "purpose": "reads only; no write was issued during this capture"
+  }
+}

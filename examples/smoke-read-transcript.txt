@@ -1,0 +1,154 @@
+# RealityBet read smoke — 2026-09-28T13:54:06Z
+# contract: 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177
+
+$ genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_platform_stats
+[genlayer-js] initializeConsensusSmartContract() is deprecated and will be removed in a future release. The consensus contract is now resolved from the static chain definition.
+- Calling method get_platform_stats on contract at 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177...
+
+Result:
+{
+  fee_bps: 150,
+  owner: '0x04e0353B7218b66D6803725ce7342E6e1225DB1b',
+  total_markets: 1,
+  total_volume: 0
+}
+
+✔ Read operation successfully executed
+
+$ genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_market_ids --args 0 10
+[genlayer-js] initializeConsensusSmartContract() is deprecated and will be removed in a future release. The consensus contract is now resolved from the static chain definition.
+- Calling method get_market_ids on contract at 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177...
+
+Result:
+[ 'm0-1790603379' ]
+
+✔ Read operation successfully executed
+
+$ genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_markets_page --args 0 10
+[genlayer-js] initializeConsensusSmartContract() is deprecated and will be removed in a future release. The consensus contract is now resolved from the static chain definition.
+- Calling method get_markets_page on contract at 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177...
+
+Result:
+[
+  {
+    categories: [ 'tech' ],
+    category: 'tech',
+    close_time: 1790603950,
+    creator: '0x5B3661C576c7001e6d6279C67F3779705d334c89',
+    description: 'Resolves YES if https://explorer-studio.genlayer.com returns a working page.',
+    fee_bps: 150,
+    id: 'm0-1790603379',
+    outcome: '',
+    pool_no: 0,
+    pool_yes: 0,
+    resolution_url: 'https://explorer-studio.genlayer.com',
+    resolve_time: 1790604550,
+    resolved_at: 0,
+    resolver_confidence: '',
+    resolver_note: '',
+    resolver_sources: '',
+    status: 'open',
+    title: 'Will the GenLayer Studio explorer load without error?'
+  }
+]
+
+✔ Read operation successfully executed
+
+$ genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_market --args m0-1790603379
+[genlayer-js] initializeConsensusSmartContract() is deprecated and will be removed in a future release. The consensus contract is now resolved from the static chain definition.
+- Calling method get_market on contract at 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177...
+
+Result:
+{
+  categories: [ 'tech' ],
+  category: 'tech',
+  close_time: 1790603950,
+  creator: '0x5B3661C576c7001e6d6279C67F3779705d334c89',
+  description: 'Resolves YES if https://explorer-studio.genlayer.com returns a working page.',
+  fee_bps: 150,
+  id: 'm0-1790603379',
+  outcome: '',
+  pool_no: 0,
+  pool_yes: 0,
+  resolution_url: 'https://explorer-studio.genlayer.com',
+  resolve_time: 1790604550,
+  resolved_at: 0,
+  resolver_confidence: '',
+  resolver_note: '',
+  resolver_sources: '',
+  status: 'open',
+  title: 'Will the GenLayer Studio explorer load without error?'
+}
+
+✔ Read operation successfully executed
+
+$ genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_market_stats --args m0-1790603379
+[genlayer-js] initializeConsensusSmartContract() is deprecated and will be removed in a future release. The consensus contract is now resolved from the static chain definition.
+- Calling method get_market_stats on contract at 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177...
+
+Result:
+{
+  market_id: 'm0-1790603379',
+  no_bets: 0,
+  outcome: '',
+  pool_no: 0,
+  pool_yes: 0,
+  resolver_note: '',
+  status: 'open',
+  title: 'Will the GenLayer Studio explorer load without error?',
+  total_bets: 0,
+  yes_bets: 0
+}
+
+✔ Read operation successfully executed
+
+$ genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_odds --args m0-1790603379
+[genlayer-js] initializeConsensusSmartContract() is deprecated and will be removed in a future release. The consensus contract is now resolved from the static chain definition.
+- Calling method get_odds on contract at 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177...
+
+Result:
+{ no: 50, pool_no: 0, pool_yes: 0, total_pool: 0, yes: 50 }
+
+✔ Read operation successfully executed
+
+$ genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_market_bets --args m0-1790603379
+[genlayer-js] initializeConsensusSmartContract() is deprecated and will be removed in a future release. The consensus contract is now resolved from the static chain definition.
+- Calling method get_market_bets on contract at 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177...
+
+Result:
+[]
+
+✔ Read operation successfully executed
+
+$ genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_market_bets_detailed --args m0-1790603379
+[genlayer-js] initializeConsensusSmartContract() is deprecated and will be removed in a future release. The consensus contract is now resolved from the static chain definition.
+- Calling method get_market_bets_detailed on contract at 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177...
+
+Result:
+[]
+
+✔ Read operation successfully executed
+
+$ genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_bets_by_bettor --args 0x5B3661C576c7001e6d6279C67F3779705d334c89
+[genlayer-js] initializeConsensusSmartContract() is deprecated and will be removed in a future release. The consensus contract is now resolved from the static chain definition.
+- Calling method get_bets_by_bettor on contract at 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177...
+
+Result:
+[]
+
+✔ Read operation successfully executed
+
+$ genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_bettor_bets --args 0x5B3661C576c7001e6d6279C67F3779705d334c89
+[genlayer-js] initializeConsensusSmartContract() is deprecated and will be removed in a future release. The consensus contract is now resolved from the static chain definition.
+- Calling method get_bettor_bets on contract at 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177...
+
+Result:
+[]
+
+✔ Read operation successfully executed
+
+$ genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_market --args m-does-not-exist
+  exited 1; decoded gl.vm.UserError: Market\ not\ found
+
+
+reads passed: 11, failed: 0, skipped: 2

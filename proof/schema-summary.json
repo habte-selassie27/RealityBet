@@ -1,0 +1,316 @@
+{
+  "note": "Parsed from `genlayer schema` output for the deployed contract; the 12/14/2 counts are cross-checked by the AST assertions in scripts/preflight.py.",
+  "network": "studionet",
+  "contract_address": "0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177",
+  "captured_at": "2026-09-28T13:55:31Z",
+  "command": "genlayer schema 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177",
+  "totals": {
+    "methods": 26,
+    "views": 12,
+    "writes": 14,
+    "payable": 2
+  },
+  "views": {
+    "get_bet": {
+      "params": [
+        {
+          "name": "bet_id",
+          "type": "string"
+        }
+      ],
+      "ret": "dict"
+    },
+    "get_bets_by_bettor": {
+      "params": [
+        {
+          "name": "bettor",
+          "type": "string"
+        }
+      ],
+      "ret": "any"
+    },
+    "get_bettor_bets": {
+      "params": [
+        {
+          "name": "bettor",
+          "type": "string"
+        }
+      ],
+      "ret": "any"
+    },
+    "get_dispute": {
+      "params": [
+        {
+          "name": "dispute_id",
+          "type": "string"
+        }
+      ],
+      "ret": "dict"
+    },
+    "get_market": {
+      "params": [
+        {
+          "name": "market_id",
+          "type": "string"
+        }
+      ],
+      "ret": "dict"
+    },
+    "get_market_bets": {
+      "params": [
+        {
+          "name": "market_id",
+          "type": "string"
+        }
+      ],
+      "ret": "any"
+    },
+    "get_market_bets_detailed": {
+      "params": [
+        {
+          "name": "market_id",
+          "type": "string"
+        }
+      ],
+      "ret": "any"
+    },
+    "get_market_ids": {
+      "params": [
+        {
+          "name": "offset",
+          "type": "int"
+        },
+        {
+          "name": "limit",
+          "type": "int"
+        }
+      ],
+      "ret": "any"
+    },
+    "get_market_stats": {
+      "params": [
+        {
+          "name": "market_id",
+          "type": "string"
+        }
+      ],
+      "ret": "dict"
+    },
+    "get_markets_page": {
+      "params": [
+        {
+          "name": "offset",
+          "type": "int"
+        },
+        {
+          "name": "limit",
+          "type": "int"
+        }
+      ],
+      "ret": "any"
+    },
+    "get_odds": {
+      "params": [
+        {
+          "name": "market_id",
+          "type": "string"
+        }
+      ],
+      "ret": "dict"
+    },
+    "get_platform_stats": {
+      "params": [],
+      "ret": "dict"
+    }
+  },
+  "writes": {
+    "claim_winnings": {
+      "params": [
+        {
+          "name": "bet_id",
+          "type": "string"
+        }
+      ],
+      "ret": "int",
+      "payable": false
+    },
+    "create_market": {
+      "params": [
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "resolution_url",
+          "type": "string"
+        },
+        {
+          "name": "categories",
+          "type": "list[string]"
+        },
+        {
+          "name": "close_time",
+          "type": "int"
+        },
+        {
+          "name": "resolve_time",
+          "type": "int"
+        }
+      ],
+      "ret": "string",
+      "payable": false
+    },
+    "force_resolve": {
+      "params": [
+        {
+          "name": "market_id",
+          "type": "string"
+        },
+        {
+          "name": "outcome",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "ret": "bool",
+      "payable": false
+    },
+    "fund_market": {
+      "params": [
+        {
+          "name": "market_id",
+          "type": "string"
+        }
+      ],
+      "ret": "bool",
+      "payable": true
+    },
+    "lock_market": {
+      "params": [
+        {
+          "name": "market_id",
+          "type": "string"
+        }
+      ],
+      "ret": "bool",
+      "payable": false
+    },
+    "place_bet": {
+      "params": [
+        {
+          "name": "market_id",
+          "type": "string"
+        },
+        {
+          "name": "side",
+          "type": "string"
+        }
+      ],
+      "ret": "string",
+      "payable": true
+    },
+    "raise_dispute": {
+      "params": [
+        {
+          "name": "market_id",
+          "type": "string"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "ret": "string",
+      "payable": false
+    },
+    "re_resolve": {
+      "params": [
+        {
+          "name": "market_id",
+          "type": "string"
+        }
+      ],
+      "ret": "bool",
+      "payable": false
+    },
+    "refund_void": {
+      "params": [
+        {
+          "name": "bet_id",
+          "type": "string"
+        }
+      ],
+      "ret": "bool",
+      "payable": false
+    },
+    "request_resolution": {
+      "params": [
+        {
+          "name": "market_id",
+          "type": "string"
+        }
+      ],
+      "ret": "bool",
+      "payable": false
+    },
+    "resolve_dispute": {
+      "params": [
+        {
+          "name": "dispute_id",
+          "type": "string"
+        },
+        {
+          "name": "upheld",
+          "type": "bool"
+        },
+        {
+          "name": "new_outcome",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "ret": "bool",
+      "payable": false
+    },
+    "set_fee": {
+      "params": [
+        {
+          "name": "bps",
+          "type": "int"
+        }
+      ],
+      "ret": "bool",
+      "payable": false
+    },
+    "transfer_ownership": {
+      "params": [
+        {
+          "name": "new_owner",
+          "type": "address"
+        }
+      ],
+      "ret": "bool",
+      "payable": false
+    },
+    "void_market": {
+      "params": [
+        {
+          "name": "market_id",
+          "type": "string"
+        }
+      ],
+      "ret": "bool",
+      "payable": false
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "note": "Deployment record for the RealityBet Intelligent Contract on StudioNet. The contract was deployed through the GenLayer Studio UI; the deploy transaction hash was never recorded in this repository, so it is reported as null rather than guessed.",
+  "network": "studionet",
+  "contract_address": "0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177",
+  "deployer": "0x04e0353B7218b66D6803725ce7342E6e1225DB1b",
+  "deployer_basis": "contracts/RealityBet.py __init__ assigns self.owner = gl.message.sender_address; get_platform_stats reports owner = deployer.",
+  "deployment_tx": null,
+  "deployment_tx_note": "not recorded in this repository; no deploy receipt exists locally or in git history",
+  "method": "(constructor)",
+  "repository_source_sha256": "3d96bfb2dfc27704cce07fcfc8de702c5e88ec385641a9c3f167f1aeb7f9c0a3",
+  "repository_source_bytes": 22056,
+  "deployed_source_sha256": "e6286abddf0ea45b1155689593279d74e3065301306f99640e45135a549359f9",
+  "deployed_source_bytes": 22057,
+  "deployed_source_matches_repository": true,
+  "difference": "the deployed source ends with one extra trailing newline; every other byte is identical",
+  "verification_command": "genlayer code 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 | diff - contracts/RealityBet.py",
+  "captured_at": "2026-09-28T13:55:31Z",
+  "explorer": "https://explorer-studio.genlayer.com/address/0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177",
+  "studio_import": "https://studio.genlayer.com/?import-contract=0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177"
+}

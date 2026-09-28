@@ -289,3 +289,82 @@ def test_fee_split(direct_vm, direct_deploy, direct_owner, direct_alice, direct_
     payout = int(contract.claim_winnings(bid_yes))
     # gross=(3000*4000)//3000=4000, fee=4000*200//10000=80, net=3920
     assert payout == 3920
+
+
+def test_market_ids_page_newest_first(direct_vm, direct_deploy, direct_owner):
+    """11 markets so the newest id (m10) would sort before m2 as a plain string."""
+    direct_vm.sender = direct_owner
+    contract = direct_deploy("contracts/RealityBet.py")
+    direct_vm.warp("2025-01-01T00:00:00Z")
+    now = _ts("2025-01-01T00:00:00Z")
+    created = [_make_market(contract, now + 1000, now + 2000) for _ in range(11)]
+
+    assert len(created) == 11
+    assert contract.get_market_ids(0, 11) == list(reversed(created))
+    assert contract.get_market_ids(0, 3) == created[-1:-4:-1]
+    assert contract.get_market_ids(10, 5) == [created[0]]
+    assert contract.get_market_ids(99, 5) == []
+    assert contract.get_market_ids(0, 999) == list(reversed(created))  # capped at 50
+
+    page = contract.get_markets_page(0, 2)
+    assert [m["id"] for m in page] == created[-1:-3:-1]
+    assert page[0]["title"].startswith("Will BTC")
+    assert page[0]["status"] == "open"
+
+
+def test_market_bets_detailed_newest_first(direct_vm, direct_deploy, direct_owner, direct_alice, direct_bob):
+    direct_vm.sender = direct_owner
+    contract = direct_deploy("contracts/RealityBet.py")
+    mid = _setup_open_market(direct_vm, contract)
+
+    direct_vm.sender = direct_alice
+    direct_vm.value = 1000
+    bid_yes = contract.place_bet(mid, "yes")
+    direct_vm.value = 0
+    direct_vm.sender = direct_bob
+    direct_vm.value = 3000
+    bid_no = contract.place_bet(mid, "no")
+    direct_vm.value = 0
+
+    assert contract.get_market_bets(mid) == [bid_yes, bid_no]
+    detailed = contract.get_market_bets_detailed(mid)
+    assert [b["id"] for b in detailed] == [bid_no, bid_yes]
+    assert detailed[1]["side"] == "yes" and detailed[1]["amount"] == 1000
+    assert detailed[0]["side"] == "no" and detailed[0]["amount"] == 3000
+    assert detailed[0]["claimed"] is False
+    assert contract.get_market_bets_detailed("m-does-not-exist") == []
+
+
+def test_bets_by_bettor_matches_raw_and_hex(direct_vm, direct_deploy, direct_owner, direct_alice, direct_bob):
+    """Regression: get_bettor_bets stripped 0x from the query but not from the
+    stored key, so it never matched and always returned []. Callers pass the
+    address as a hex string, so both the 0x-prefixed and bare forms must hit."""
+    direct_vm.sender = direct_owner
+    contract = direct_deploy("contracts/RealityBet.py")
+    mid = _setup_open_market(direct_vm, contract)
+    direct_vm.sender = direct_alice
+    direct_vm.value = 1000
+    bid_yes = contract.place_bet(mid, "yes")
+    direct_vm.value = 0
+    direct_vm.sender = direct_bob
+    direct_vm.value = 3000
+    bid_no = contract.place_bet(mid, "no")
+    direct_vm.value = 0
+
+    # The address as stored on chain (0x-prefixed hex) and the same value
+    # without its prefix must both resolve.
+    alice_hex = "0x" + direct_alice.hex()
+    bare = direct_alice.hex()
+    alice_bets = contract.get_bets_by_bettor(alice_hex)
+    assert len(alice_bets) == 1
+    assert alice_bets[0]["id"] == bid_yes
+    assert alice_bets[0]["side"] == "yes"
+    assert alice_bets[0]["market_id"] == mid
+    assert alice_bets[0]["bettor"].lower() == alice_hex
+
+    assert contract.get_bettor_bets(alice_hex) == [bid_yes]
+    assert contract.get_bettor_bets(bare) == [bid_yes]
+    assert [b["id"] for b in contract.get_bets_by_bettor(bare)] == [bid_yes]
+
+    assert [b["id"] for b in contract.get_bets_by_bettor("0x" + direct_bob.hex())] == [bid_no]
+    assert contract.get_bets_by_bettor("0xdeadbeef") == []

@@ -1,0 +1,229 @@
+{
+  "bets": {
+    "get_bet(bid_no)": {
+      "amount": 4000,
+      "bettor": "0xb2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+      "claimed": false,
+      "id": "b1-1767225600",
+      "market_id": "m0-1767225600",
+      "placed_at": 1767225600,
+      "side": "no"
+    },
+    "get_bet(bid_yes)": {
+      "amount": 6000,
+      "bettor": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+      "claimed": true,
+      "id": "b0-1767225600",
+      "market_id": "m0-1767225600",
+      "placed_at": 1767225600,
+      "side": "yes"
+    },
+    "get_market_bets(mid1)": [
+      "b0-1767225600",
+      "b1-1767225600"
+    ],
+    "get_market_bets_detailed(mid1)": [
+      {
+        "amount": 4000,
+        "bettor": "0xb2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "claimed": false,
+        "id": "b1-1767225600",
+        "market_id": "m0-1767225600",
+        "placed_at": 1767225600,
+        "side": "no"
+      },
+      {
+        "amount": 6000,
+        "bettor": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+        "claimed": true,
+        "id": "b0-1767225600",
+        "market_id": "m0-1767225600",
+        "placed_at": 1767225600,
+        "side": "yes"
+      }
+    ]
+  },
+  "bettor_index": {
+    "get_bets_by_bettor(alice)": [
+      {
+        "amount": 6000,
+        "bettor": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+        "claimed": true,
+        "id": "b0-1767225600",
+        "market_id": "m0-1767225600",
+        "placed_at": 1767225600,
+        "side": "yes"
+      },
+      {
+        "amount": 1000,
+        "bettor": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+        "claimed": false,
+        "id": "b2-1767228000",
+        "market_id": "m1-1767228000",
+        "placed_at": 1767228000,
+        "side": "yes"
+      }
+    ],
+    "get_bettor_bets(alice)": [
+      "b0-1767225600",
+      "b2-1767228000"
+    ]
+  },
+  "dispute": {
+    "get_dispute(did)": {
+      "id": "d0-1767230100",
+      "market_id": "m1-1767228000",
+      "outcome": "",
+      "raised_by": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+      "reason": "primary source contradicted itself",
+      "resolved": false
+    }
+  },
+  "market": {
+    "get_market(mid1)": {
+      "categories": [
+        "crypto"
+      ],
+      "category": "crypto",
+      "close_time": 1767226600,
+      "creator": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "description": "Resolves YES if BTC closes above 100k.",
+      "fee_bps": 150,
+      "id": "m0-1767225600",
+      "outcome": "yes",
+      "pool_no": 4000,
+      "pool_yes": 6000,
+      "resolution_url": "https://coinmarketcap.com/currencies/bitcoin/",
+      "resolve_time": 1767227600,
+      "resolved_at": 1767228000,
+      "resolver_confidence": "high",
+      "resolver_note": "BTC closed the year above 100k.",
+      "resolver_sources": "[\"https://coinmarketcap.com/currencies/bitcoin/\"]",
+      "status": "resolved",
+      "title": "Will BTC close above $100k on Dec 31 2026?"
+    },
+    "get_market(mid2)": {
+      "categories": [
+        "crypto",
+        "finance"
+      ],
+      "category": "crypto",
+      "close_time": 1767229000,
+      "creator": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+      "description": "Resolves YES if BTC closes above 100k.",
+      "fee_bps": 150,
+      "id": "m1-1767228000",
+      "outcome": "yes",
+      "pool_no": 0,
+      "pool_yes": 1000,
+      "resolution_url": "https://coinmarketcap.com/currencies/bitcoin/",
+      "resolve_time": 1767230000,
+      "resolved_at": 1767230100,
+      "resolver_confidence": "high",
+      "resolver_note": "BTC closed the year above 100k.",
+      "resolver_sources": "[\"https://coinmarketcap.com/currencies/bitcoin/\"]",
+      "status": "disputed",
+      "title": "Will BTC close above $100k on Dec 31 2026?"
+    }
+  },
+  "market_ids": {
+    "get_market_ids(0, 10)": [
+      "m1-1767228000",
+      "m0-1767225600"
+    ]
+  },
+  "market_stats": {
+    "get_market_stats(mid1)": {
+      "market_id": "m0-1767225600",
+      "no_bets": 1,
+      "outcome": "yes",
+      "pool_no": 4000,
+      "pool_yes": 6000,
+      "resolver_note": "BTC closed the year above 100k.",
+      "status": "resolved",
+      "title": "Will BTC close above $100k on Dec 31 2026?",
+      "total_bets": 2,
+      "yes_bets": 1
+    }
+  },
+  "markets_page": {
+    "get_markets_page(0, 2)": [
+      {
+        "categories": [
+          "crypto",
+          "finance"
+        ],
+        "category": "crypto",
+        "close_time": 1767229000,
+        "creator": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+        "description": "Resolves YES if BTC closes above 100k.",
+        "fee_bps": 150,
+        "id": "m1-1767228000",
+        "outcome": "yes",
+        "pool_no": 0,
+        "pool_yes": 1000,
+        "resolution_url": "https://coinmarketcap.com/currencies/bitcoin/",
+        "resolve_time": 1767230000,
+        "resolved_at": 1767230100,
+        "resolver_confidence": "high",
+        "resolver_note": "BTC closed the year above 100k.",
+        "resolver_sources": "[\"https://coinmarketcap.com/currencies/bitcoin/\"]",
+        "status": "disputed",
+        "title": "Will BTC close above $100k on Dec 31 2026?"
+      },
+      {
+        "categories": [
+          "crypto"
+        ],
+        "category": "crypto",
+        "close_time": 1767226600,
+        "creator": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "description": "Resolves YES if BTC closes above 100k.",
+        "fee_bps": 150,
+        "id": "m0-1767225600",
+        "outcome": "yes",
+        "pool_no": 4000,
+        "pool_yes": 6000,
+        "resolution_url": "https://coinmarketcap.com/currencies/bitcoin/",
+        "resolve_time": 1767227600,
+        "resolved_at": 1767228000,
+        "resolver_confidence": "high",
+        "resolver_note": "BTC closed the year above 100k.",
+        "resolver_sources": "[\"https://coinmarketcap.com/currencies/bitcoin/\"]",
+        "status": "resolved",
+        "title": "Will BTC close above $100k on Dec 31 2026?"
+      }
+    ]
+  },
+  "observed": {
+    "claimed_payout": 9850,
+    "transfers": [
+      [
+        "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        150
+      ],
+      [
+        "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+        9850
+      ]
+    ]
+  },
+  "odds": {
+    "get_odds(mid1)": {
+      "no": 40,
+      "pool_no": 4000,
+      "pool_yes": 6000,
+      "total_pool": 10000,
+      "yes": 60
+    }
+  },
+  "platform": {
+    "get_platform_stats()": {
+      "fee_bps": 150,
+      "owner": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "total_markets": 2,
+      "total_volume": 11000
+    }
+  },
+  "source": "Captured from scripts/preflight.py --dump-views: the same contracts/RealityBet.py executed in-process with mocked web/LLM non-determinism, so every field is populated. Live payloads from the deployed chain are in proof/state-reads.json and examples/smoke-read-transcript.txt."
+}

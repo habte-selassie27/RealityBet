@@ -409,9 +409,7 @@ class RealityBet(gl.Contract):
         self._resolve(market_id)
         return True
 
-    @gl.public.view
-    def get_market(self, market_id: str) -> dict:
-        m = self._get_market(market_id)
+    def _market_dict(self, m: Market) -> dict:
         cats = list(m.categories)
         return {"id": m.id, "creator": format(m.creator, "x"), "title": m.title,
                 "description": m.description, "resolution_url": m.resolution_url,
@@ -423,12 +421,85 @@ class RealityBet(gl.Contract):
                 "resolver_note": m.resolver_note, "resolver_confidence": m.resolver_confidence,
                 "resolver_sources": m.resolver_sources}
 
-    @gl.public.view
-    def get_bet(self, bet_id: str) -> dict:
-        b = self._get_bet(bet_id)
+    def _bet_dict(self, b: Bet) -> dict:
         return {"id": b.id, "market_id": b.market_id, "bettor": format(b.bettor, "x"),
                 "side": b.side, "amount": int(b.amount), "claimed": b.claimed,
                 "placed_at": int(b.placed_at)}
+
+    def _seq(self, mid: str) -> int:
+        """Sort key for "m<count>-<timestamp>" ids — string order would put m10 before m2."""
+        try:
+            return int(str(mid).split("-")[0][1:])
+        except Exception:
+            return 0
+
+    def _market_ids(self, offset: int, limit: int) -> list[str]:
+        """Stored market ids, newest first, paginated. limit 0 means "up to the cap" (50)."""
+        ids: list[str] = [str(k) for k in self.markets]
+        ids.sort(key=self._seq)
+        if offset < 0:
+            offset = 0
+        if limit <= 0 or limit > 50:
+            limit = 50
+        out: list[str] = []
+        i = len(ids) - 1 - offset
+        while i >= 0 and len(out) < limit:
+            out.append(ids[i])
+            i -= 1
+        return out
+
+    @gl.public.view
+    def get_market(self, market_id: str) -> dict:
+        return self._market_dict(self._get_market(market_id))
+
+    @gl.public.view
+    def get_market_ids(self, offset: int, limit: int) -> typing.Any:
+        return self._market_ids(offset, limit)
+
+    @gl.public.view
+    def get_markets_page(self, offset: int, limit: int) -> typing.Any:
+        """Full market dicts for a page of ids — one RPC call instead of N get_market calls."""
+        out: typing.Any = []
+        for mid in self._market_ids(offset, limit):
+            out.append(self._market_dict(self._get_market(mid)))
+        return out
+
+    @gl.public.view
+    def get_bet(self, bet_id: str) -> dict:
+        return self._bet_dict(self._get_bet(bet_id))
+
+    @gl.public.view
+    def get_market_bets_detailed(self, market_id: str) -> typing.Any:
+        """Every bet on a market as full dicts, newest first."""
+        out: typing.Any = []
+        if market_id not in self.market_bets:
+            return out
+        bids = list(self.market_bets[market_id])
+        i = len(bids) - 1
+        while i >= 0:
+            out.append(self._bet_dict(self._get_bet(bids[i])))
+            i -= 1
+        return out
+
+    def _bettor_bet_ids(self, bettor: str) -> list[str]:
+        """Stored bet ids for an address, comparing 0x-prefixed and bare hex alike."""
+        key = str(bettor).lower().strip()
+        if key.startswith("0x"):
+            key = key[2:]
+        for k in self.bettor_bets:
+            kk = str(k).lower()
+            if kk.startswith("0x"):
+                kk = kk[2:]
+            if kk == key:
+                return list(self.bettor_bets[k])
+        return []
+
+    @gl.public.view
+    def get_bets_by_bettor(self, bettor: str) -> typing.Any:
+        out: typing.Any = []
+        for bid in self._bettor_bet_ids(bettor):
+            out.append(self._bet_dict(self._get_bet(bid)))
+        return out
 
     @gl.public.view
     def get_dispute(self, dispute_id: str) -> dict:
@@ -446,11 +517,10 @@ class RealityBet(gl.Contract):
 
     @gl.public.view
     def get_bettor_bets(self, bettor: str) -> typing.Any:
-        key = bettor.lower().replace("0x", "")
-        for k in self.bettor_bets:
-            if k.lower() == key:
-                return list(self.bettor_bets[k])
-        return []
+        # Stored keys come from _addr_key() (format(addr, "x")), which keeps its
+        # 0x prefix — stripping only the query side never matched, so this used
+        # to always return []. _bettor_bet_ids normalises both sides.
+        return self._bettor_bet_ids(bettor)
 
     @gl.public.view
     def get_odds(self, market_id: str) -> dict:
