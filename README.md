@@ -13,14 +13,14 @@ bot, another contract) can be built on the views below.
 
 | | |
 |---|---|
-| Contract | [`contracts/RealityBet.py`](contracts/RealityBet.py) — 570 lines, single storage class |
-| Tests | [`tests/direct/test_realitybet.py`](tests/direct/test_realitybet.py) — 17 direct-VM tests |
+| Contract | [`contracts/RealityBet.py`](contracts/RealityBet.py) — 580 lines, single storage class |
+| Tests | [`tests/direct/test_realitybet.py`](tests/direct/test_realitybet.py) — 19 direct-VM tests |
 | Deployed (Studio, studionet) | `0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177` |
 | Explorer | https://explorer-studio.genlayer.com/address/0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 |
 | Reference client (separate) | https://reality-bet.vercel.app |
 | Calling it | [`COMMANDS.md`](COMMANDS.md) — every view and method as a `genlayer call` / `genlayer write` command |
 | Deep-dive docs | [`docs/`](docs/) — [ARCHITECTURE](docs/ARCHITECTURE.md), [CONSENSUS](docs/CONSENSUS.md), [INTEGRATION](docs/INTEGRATION.md), [THREAT_MODEL](docs/THREAT_MODEL.md) |
-| Verification | [`scripts/preflight.py`](scripts/preflight.py) — 21 offline AST + behavior checks; [`scripts/smoke.sh`](scripts/smoke.sh) — read-only live smoke |
+| Verification | [`scripts/preflight.py`](scripts/preflight.py) — 24 offline AST + behavior checks; [`scripts/smoke.sh`](scripts/smoke.sh) — read-only live smoke |
 | Evidence | [`examples/`](examples/) — live CLI transcript, view payloads, resolution prompt; [`proof/`](proof/) — sanitized deployment/state/schema captures + [screenshots](proof/screenshots/) of the `create_market` write reaching `MAJORITY_AGREE` |
 
 ---
@@ -51,10 +51,11 @@ def _fetch() -> str:
     web_data = gl.nondet.web.get(url)          # non-deterministic I/O
     body = web_data.body.decode("utf-8")[:6000] # bounded: prompt size is consensus cost
     res = gl.nondet.exec_prompt(prompt + body)  # non-deterministic judgement
-    return json.dumps(..., sort_keys=True)      # key-sorted: stable diffs for the comparator
+    return json.dumps(self._settlement_policy(res), sort_keys=True)  # post-policy, key-sorted
 
 raw = gl.eq_principle.prompt_comparative(
-    _fetch, "`outcome` must be exactly the same. All other fields must be similar"
+    _fetch,
+    "`outcome` and `confidence` must be exactly the same. All other fields must be similar",
 )
 ```
 
@@ -65,10 +66,16 @@ Why this template and not the alternatives:
   free text produces endless failed consensus rounds and appeal storms.
 - **Not `prompt_equivalence` alone.** Plain equivalence compares only the two results
   (leader vs validator) and cannot express "these must match *these fields*". The
-  comparative template takes a field-level rule, so the outcome can be pinned to
-  byte-equality while the prose stays fuzzy.
+  comparative template takes a field-level rule, so the settlement decision can be
+  pinned to byte-equality while the prose stays fuzzy.
 - **Not a format-only validator.** A JSON-schema check would confirm the reply *is*
   JSON, never whether it is *right*. Only the comparative rule checks semantics.
+- **Not `outcome` alone.** `confidence` also changes settlement — the low-confidence
+  policy rewrites `yes`/`no` to `void` — so the rule binds *both* fields to exact
+  equality. On top of that, the policy runs inside `_fetch`, **before** the comparison:
+  what the validators agree on exactly is the final post-policy result, not the raw
+  model reply, and the same idempotent normalization runs again on the consensus
+  output before anything is written to storage.
 
 Non-determinism is confined to `_fetch`: `gl.nondet.web.get` and
 `gl.nondet.exec_prompt`. Every validator re-executes both inside the same equivalence
@@ -80,9 +87,9 @@ leader.
 | Failure | Path | Result |
 |---|---|---|
 | LLM returns unparsable output | `except` in `_resolve` | market `VOIDED`, refunds open |
-| Confidence is `low` and outcome isn't `void` | forced branch | rewritten to `void`, original reason preserved in `resolver_note` |
-| Outcome outside `yes/no/void` | forced branch | rewritten to `void` |
-| Key-name drift (`result`/`verdict`, `conf`, `sources`) | alias lookup | accepted, normalized |
+| Confidence is `low` and outcome isn't `void` | `_settlement_policy`, run inside `_fetch` before the comparison | rewritten to `void` before consensus sees it; original reason preserved in `resolver_note` |
+| Outcome outside `yes/no/void` | `_settlement_policy` | rewritten to `void` |
+| Key-name drift (`result`/`verdict`, `conf`, `sources`) | alias lookup | accepted, normalized pre-consensus |
 | Validators disagree beyond the rule | consensus fails | no state change; appeal path |
 
 Outcome, `resolver_note`, `resolver_confidence` and `resolver_sources` are all written
@@ -117,9 +124,7 @@ bettor_bets: TreeMap[str, DynArray[str]] # address → [bet_id]      (secondary 
 ## 4. Lifecycle
 
 ```
-  OPEN ──close_time──► LOCKED ──resolve_time──► RESOLVED ──► claims open
-   │                     │                          │
-   │                     │                     [24h window]
+  OPEN ──close_time──► LOCKED ──resolve_time──► RESOLVED ──[24h window]──► claims open
    │                     │                          │
    │                     │                       DISPUTED ──► owner ruling
    │                     │                              └──► re_resolve (AI re-runs)
@@ -135,13 +140,22 @@ bettor_bets: TreeMap[str, DynArray[str]] # address → [bet_id]      (secondary 
 - `request_resolution` — anyone, once `resolve_time` passes and the market is `LOCKED`.
   Permissionless so a stuck market can always be settled.
 - `claim_winnings` / `refund_void` — bettor only, once per bet (`claimed` flag).
-- `raise_dispute` — bettors only, within 24h of resolution.
+  `claim_winnings` additionally requires `status == RESOLVED` with **no open dispute**
+  *and* `now >= resolved_at + 86400`: claims open exactly when the dispute window
+  closes, so an appeal can never follow a payout and make both sides claimable
+  against the same pool. `refund_void` needs only `VOIDED`, which is terminal and
+  cannot be disputed.
+- `raise_dispute` — bettors only, **strictly** within 24h of resolution
+  (`now < resolved_at + 86400` — disjoint from the claim boundary, so at the exact
+  boundary second a claim succeeds and a dispute cannot be filed).
 - `resolve_dispute` / `re_resolve` / `force_resolve` — owner. `re_resolve` re-runs the
-  LLM against fresh web state; `force_resolve` is the last-resort override.
+  LLM against fresh web state; an **upheld** ruling re-stamps `resolved_at`, restarting
+  the full 24h window on the new outcome; `force_resolve` is the last-resort override.
 - `set_fee` (≤ 5%, hard-capped) / `transfer_ownership` — owner.
 
 Payout ordering is checks-effects-interactions: `claimed` is set and the bet is written
-back **before** `emit_transfer` fires, so a re-entrant call finds `claimed == True`.
+back **before any** `emit_transfer` fires — the owner fee leg included — so a re-entrant
+call finds `claimed == True`.
 
 ---
 
@@ -195,9 +209,9 @@ Rounding dust from integer division stays in the contract; there is no sweep fun
 
 ```bash
 pip install genlayer
-pytest tests -q        # 17 passed
+pytest tests -q        # 19 passed
 
-python3 scripts/preflight.py   # 21 offline checks: AST invariants + behavior harness
+python3 scripts/preflight.py   # 24 offline checks: AST invariants + behavior harness
 scripts/smoke.sh               # read-only live smoke against the deployed contract
 ```
 
@@ -210,6 +224,7 @@ Direct-VM tests with `mock_web` / `mock_llm`, so no network or LLM call is made:
 | Lifecycle | lock before/after `close_time`, void authorization |
 | Resolution | YES pays winner, NO pays winner, VOID refunds, **low confidence auto-voids** |
 | Payouts | exact fee-split arithmetic, loser gets 0, duplicate claim reverts |
+| Claim gating | claim blocked before the 24h window and while disputed, window/dispute boundary is disjoint, an appeal restarts the window so both sides are never claimable |
 | Disputes | full raise → dispute → resolve flow, non-bettor rejected |
 | Storage views | paginated ids newest-first with `m10` vs `m2`, batched views, address index matching `0x`-prefixed **and** bare hex |
 

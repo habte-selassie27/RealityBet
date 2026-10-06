@@ -7,8 +7,8 @@ layer, and no off-chain service in this repo.
 ## Layout
 
 ```
-contracts/RealityBet.py        # the entire contract (570 lines)
-tests/direct/test_realitybet.py# 17 direct-VM tests (mock_web / mock_llm)
+contracts/RealityBet.py        # the entire contract (580 lines)
+tests/direct/test_realitybet.py# 19 direct-VM tests (mock_web / mock_llm)
 COMMANDS.md                    # genlayer call/write reference for all 26 methods
 README.md                      # consensus design, state design, money, method reference
 docs/                          # ARCHITECTURE, CONSENSUS, INTEGRATION, THREAT_MODEL
@@ -25,7 +25,7 @@ scripts/smoke.sh               # read-only live smoke; --write is opt-in and spe
 
 ```bash
 pytest tests -q        # run the direct-VM suite
-python3 scripts/preflight.py             # 21 offline checks, no network
+python3 scripts/preflight.py             # 24 offline checks, no network
 python3 scripts/preflight.py --dump-views examples   # regenerate examples payloads
 scripts/smoke.sh                          # read-only live smoke against studionet
 genlayer up           # localnet, needed for integration-style checks
@@ -40,20 +40,31 @@ user-facing failure (never `assert`), snake_case storage fields on the dataclass
 
 1. **Money is integer math, never LLM output.** The resolver returns an outcome string;
    every amount is computed with `u256` division.
-2. **Bettor-facing transfers run after `claimed` is set**, so a re-entrant call sees
-   `claimed == True` (`claim_winnings` lines 231-234, `refund_void` 247-249). Keep that
-   ordering — including the caveat that the *fee* transfer at line 230 currently fires
-   before the flag; see `docs/THREAT_MODEL.md` if you touch it.
+2. **Every transfer runs after `claimed` is set**, fee leg included, so a re-entrant
+   call sees `claimed == True` (`claim_winnings` lines 234-239, `refund_void` 252-254).
+   Preflight check 09 rejects any `emit_transfer` that precedes the `claimed` write.
 3. **Ambiguity resolves to `VOID`, never to a guess.** Unparsable LLM output, low
-   confidence, or an unknown outcome string all rewrite to `void`. This is deliberate —
-   refunds cost less than a confidently wrong settlement.
-4. **`lock_market`, `request_resolution` and `place_bet` guards are time-based and
+   confidence, or an unknown outcome string all rewrite to `void` via
+   `_settlement_policy` (lines 267-293). This is deliberate — refunds cost less than a
+   confidently wrong settlement.
+4. **Consensus must bind every field that changes settlement.** The comparative rule
+   pins `outcome` *and* `confidence` exactly (lines 321-324), and the policy runs inside
+   `_fetch` **before** the comparison (line 319), so validators agree on the final
+   post-policy result. Do not relax the rule to `outcome` only — `confidence` rewrites
+   `yes`/`no` to `void` after all.
+5. **Claims and disputes have disjoint time boundaries.** `claim_winnings` requires
+   `now >= resolved_at + 86400` (line 219) and a non-`DISPUTED` status (215-218);
+   `raise_dispute` requires `now < resolved_at + 86400` (line 364). Keep one side
+   inclusive and the other exclusive — if they can both hold at the same instant, an
+   appeal can race a payout against the same pool. An upheld ruling must keep
+   re-stamping `resolved_at` (line 399).
+6. **`lock_market`, `request_resolution` and `place_bet` guards are time-based and
    permissionless by design.** Do not add caller checks to them; that would let a
    market stay open or stay unsettled past its deadline.
-5. **Only the outcome is non-deterministic.** Keep all `gl.nondet.*` calls inside
+7. **Only the outcome is non-deterministic.** Keep all `gl.nondet.*` calls inside
    `_resolve`'s `_fetch`, otherwise unrelated methods become non-deterministic and stop
    reaching consensus.
-6. **Known flaw:** `fund_market` splits funds across both pools with no bet attached, so
+8. **Known flaw:** `fund_market` splits funds across both pools with no bet attached, so
    it corrupts the parimutuel ratio and is unclaimable. It is in the deployed contract at
    `0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177`, so it cannot be deleted without
    redeploying and re-pointing the evidence links.

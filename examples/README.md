@@ -30,7 +30,8 @@ model outputs without spending fees or depending on live web content.
 - 6000 yes + 4000 no staked → winner takes the whole 10000-pool share:
   `10000 * 6000 / 6000 = 10000`, minus the 150 bps fee → `payout 9850`, `fee 150`.
   Both transfers are visible under `observed.transfers` in `view-payloads.json`.
-- A voided market (`status: voided` or `outcome: void`) pays back full stakes through
-  `refund_void`; nothing is minted or burned.
+- A voided market pays back full stakes with no fee: `status: voided` through
+  `refund_void`, `outcome: void` through `claim_winnings`'s void branch — the latter
+  still waits out the 24h dispute window first. Nothing is minted or burned.
 - `resolver_sources` is stored as a JSON string (`"[\\"...\\" ]"`), not a list —
   that is the contract's on-chain shape, not a serialization bug in the dump.

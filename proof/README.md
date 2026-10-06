@@ -19,13 +19,20 @@ only the decoded `gl.vm.UserError` string is kept.
 `0x04e0353B7218b66D6803725ce7342E6e1225DB1b` (the deployer — `__init__` assigns
 `self.owner = gl.message.sender_address`).
 
-Deployed source is **byte-identical** to this repository's `contracts/RealityBet.py`
-except for one extra trailing newline:
+> **Status of these captures.** They describe the deployment at the address above.
+> `contracts/RealityBet.py` has since been updated — the comparative rule now binds
+> `outcome` *and* `confidence` with the settlement policy applied pre-consensus, and
+> `claim_winnings` is gated on the dispute window — so the source is no longer
+> byte-identical to what is deployed. Redeploy to StudioNet and refresh this file
+> (address, hashes, state reads, schema) before resubmitting.
 
-- repository: 22056 bytes, sha256 `3d96bfb2dfc27704cce07fcfc8de702c5e88ec385641a9c3f167f1aeb7f9c0a3`
+Deployed source **was byte-identical** to this repository's `contracts/RealityBet.py`
+at capture time, except for one extra trailing newline:
+
+- repository at capture time: 22056 bytes, sha256 `3d96bfb2dfc27704cce07fcfc8de702c5e88ec385641a9c3f167f1aeb7f9c0a3`
 - deployed: 22057 bytes, sha256 `e6286abddf0ea45b1155689593279d74e3065301306f99640e45135a549359f9`
 
-Verify yourself:
+Verify yourself (must be clean again after the next deploy):
 
 ```bash
 genlayer code 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 | diff - contracts/RealityBet.py

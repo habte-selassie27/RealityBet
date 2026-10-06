@@ -58,21 +58,21 @@
         "amount": 1000,
         "bettor": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
         "claimed": false,
-        "id": "b2-1767228000",
-        "market_id": "m1-1767228000",
-        "placed_at": 1767228000,
+        "id": "b2-1767314400",
+        "market_id": "m1-1767314400",
+        "placed_at": 1767314400,
         "side": "yes"
       }
     ],
     "get_bettor_bets(alice)": [
       "b0-1767225600",
-      "b2-1767228000"
+      "b2-1767314400"
     ]
   },
   "dispute": {
     "get_dispute(did)": {
-      "id": "d0-1767230100",
-      "market_id": "m1-1767228000",
+      "id": "d0-1767316500",
+      "market_id": "m1-1767314400",
       "outcome": "",
       "raised_by": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
       "reason": "primary source contradicted itself",
@@ -108,17 +108,17 @@
         "finance"
       ],
       "category": "crypto",
-      "close_time": 1767229000,
+      "close_time": 1767315400,
       "creator": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
       "description": "Resolves YES if BTC closes above 100k.",
       "fee_bps": 150,
-      "id": "m1-1767228000",
+      "id": "m1-1767314400",
       "outcome": "yes",
       "pool_no": 0,
       "pool_yes": 1000,
       "resolution_url": "https://coinmarketcap.com/currencies/bitcoin/",
-      "resolve_time": 1767230000,
-      "resolved_at": 1767230100,
+      "resolve_time": 1767316400,
+      "resolved_at": 1767316500,
       "resolver_confidence": "high",
       "resolver_note": "BTC closed the year above 100k.",
       "resolver_sources": "[\"https://coinmarketcap.com/currencies/bitcoin/\"]",
@@ -128,7 +128,7 @@
   },
   "market_ids": {
     "get_market_ids(0, 10)": [
-      "m1-1767228000",
+      "m1-1767314400",
       "m0-1767225600"
     ]
   },
@@ -154,17 +154,17 @@
           "finance"
         ],
         "category": "crypto",
-        "close_time": 1767229000,
+        "close_time": 1767315400,
         "creator": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
         "description": "Resolves YES if BTC closes above 100k.",
         "fee_bps": 150,
-        "id": "m1-1767228000",
+        "id": "m1-1767314400",
         "outcome": "yes",
         "pool_no": 0,
         "pool_yes": 1000,
         "resolution_url": "https://coinmarketcap.com/currencies/bitcoin/",
-        "resolve_time": 1767230000,
-        "resolved_at": 1767230100,
+        "resolve_time": 1767316400,
+        "resolved_at": 1767316500,
         "resolver_confidence": "high",
         "resolver_note": "BTC closed the year above 100k.",
         "resolver_sources": "[\"https://coinmarketcap.com/currencies/bitcoin/\"]",

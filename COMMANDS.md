@@ -76,9 +76,9 @@ Owner is `0x04e0353B7218b66D6803725ce7342E6e1225DB1b`. Access control:
 | `fund_market` * | anyone, `OPEN` only |
 | `lock_market` | anyone, after `close_time` |
 | `request_resolution` | anyone, after `resolve_time`, `LOCKED` only |
-| `claim_winnings` | the bettor, once per bet, `RESOLVED` only |
+| `claim_winnings` | the bettor, once per bet, `RESOLVED` only, no open dispute, and only after `resolved_at + 24h` |
 | `refund_void` | the bettor, once per bet, `VOIDED` only |
-| `raise_dispute` | a bettor on that market, within 24h of resolution |
+| `raise_dispute` | a bettor on that market, strictly within 24h of resolution (`now < resolved_at + 86400`) |
 | `void_market` | market creator or owner, `OPEN`/`LOCKED` only |
 | `force_resolve` | **owner** |
 | `resolve_dispute` | **owner** |
@@ -117,6 +117,7 @@ genlayer write $C force_resolve       --args "$MID" void "source offline"   # ow
 genlayer write $C void_market         --args "$MID"          # creator or owner, pre-resolution
 
 # --- payouts (per bet) --------------------------------------------------------
+# claim_winnings waits for resolved_at + 24h (reverts "Dispute window not closed")
 genlayer write $C claim_winnings      --args "$BID"
 genlayer write $C refund_void         --args "$BID"
 
@@ -205,8 +206,8 @@ A captured run lives at [`examples/smoke-read-transcript.txt`](examples/smoke-re
 ## Local
 
 ```bash
-pytest tests -q                        # 17 direct-VM tests, no network needed
-python3 scripts/preflight.py           # 21 offline AST + behavior checks
+pytest tests -q                        # 19 direct-VM tests, no network needed
+python3 scripts/preflight.py           # 24 offline AST + behavior checks
 genlayer up
 genlayer deploy contracts/RealityBet.py
 genlayer network set localnet

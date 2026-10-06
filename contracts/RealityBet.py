@@ -212,9 +212,14 @@ class RealityBet(gl.Contract):
             raise gl.vm.UserError("Not your bet")
         if b.claimed:
             raise gl.vm.UserError("Already claimed")
+        if m.status == MarketStatus.DISPUTED:
+            raise gl.vm.UserError("Market under dispute")
         if not m.status == MarketStatus.RESOLVED:
             raise gl.vm.UserError("Market not resolved")
+        if not self._now() >= u256(int(m.resolved_at) + 86400):
+            raise gl.vm.UserError("Dispute window not closed")
         payout = u256(0)
+        fee = u256(0)
         if m.outcome == Outcome.VOID:
             payout = b.amount
         elif b.side == m.outcome:
@@ -226,10 +231,10 @@ class RealityBet(gl.Contract):
                 gross = u256(int(b.amount) * int(total_pool) // int(win_pool))
                 fee = u256(int(gross) * int(m.fee_bps) // 10000)
                 payout = u256(int(gross) - int(fee))
-                if int(fee) > 0:
-                    gl.get_contract_at(self.owner).emit_transfer(value=fee)
         b.claimed = True
         self.bets[bet_id] = b
+        if int(fee) > 0:
+            gl.get_contract_at(self.owner).emit_transfer(value=fee)
         if int(payout) > 0:
             gl.get_contract_at(b.bettor).emit_transfer(value=payout)
         return payout
@@ -259,6 +264,34 @@ class RealityBet(gl.Contract):
         self._resolve(market_id)
         return True
 
+    def _settlement_policy(self, result: typing.Any) -> dict:
+        """Canonical settlement fields with the fail-toward-void policy applied.
+        Runs inside _fetch before the comparative check and again on the consensus
+        result, so validators compare — and the chain stores — the same final
+        post-policy outcome. Idempotent by construction."""
+        if not isinstance(result, dict):
+            return {"outcome": Outcome.VOID, "confidence": "low",
+                    "reason": "AI parse error voided", "sources_checked": ""}
+        low = {}
+        for k, v in result.items():
+            low[str(k).lower().strip()] = v
+        outcome = str(low.get("outcome", low.get("result", low.get("verdict", "void")))).lower().strip()
+        conf = str(low.get("confidence", low.get("conf", "low"))).lower().strip()
+        reason = str(low.get("reason", low.get("explanation", low.get("analysis", ""))))[:500]
+        srcs = low.get("sources_checked", low.get("sources", []))
+        sources = ""
+        if isinstance(srcs, list):
+            sources = json.dumps([str(s) for s in srcs])
+        elif isinstance(srcs, str):
+            sources = srcs
+        if conf == "low" and outcome != Outcome.VOID:
+            outcome = Outcome.VOID
+            reason = "Low confidence auto-void. Original: " + reason
+        if outcome not in [Outcome.YES, Outcome.NO, Outcome.VOID]:
+            outcome = Outcome.VOID
+            reason = "Invalid AI outcome voided"
+        return {"outcome": outcome, "confidence": conf, "reason": reason, "sources_checked": sources}
+
     def _resolve(self, market_id: str) -> None:
         m = self._get_market(market_id)
         url = m.resolution_url
@@ -280,53 +313,30 @@ class RealityBet(gl.Contract):
             body = web_data.body.decode("utf-8")[:6000]
             full = prompt + "\nPAGE CONTENT:\n" + body
             res = gl.nondet.exec_prompt(full)
-            if isinstance(res, dict):
-                return json.dumps(res, sort_keys=True)
-            cleaned = res.replace("```json", "").replace("```", "").strip()
-            return json.dumps(json.loads(cleaned), sort_keys=True)
+            if isinstance(res, str):
+                cleaned = res.replace("```json", "").replace("```", "").strip()
+                res = json.loads(cleaned)
+            return json.dumps(self._settlement_policy(res), sort_keys=True)
 
         raw = gl.eq_principle.prompt_comparative(
-            _fetch, "`outcome` must be exactly the same. All other fields must be similar"
+            _fetch,
+            "`outcome` and `confidence` must be exactly the same. All other fields must be similar",
         )
-        outcome = "void"
-        reason = ""
-        conf = "low"
-        sources = ""
         try:
-            result = json.loads(raw) if isinstance(raw, str) else raw
-            if isinstance(result, dict):
-                low = {}
-                for k, v in result.items():
-                    low[str(k).lower().strip()] = v
-                outcome = str(low.get("outcome", low.get("result", low.get("verdict", "void")))).lower().strip()
-                conf = str(low.get("confidence", low.get("conf", "low"))).lower().strip()
-                reason = str(low.get("reason", low.get("explanation", low.get("analysis", ""))))[:500]
-                srcs = low.get("sources_checked", low.get("sources", []))
-                if isinstance(srcs, list):
-                    sources = json.dumps([str(s) for s in srcs])
-                elif isinstance(srcs, str):
-                    sources = srcs
-                if conf == "low" and outcome != "void":
-                    outcome = "void"
-                    reason = "Low confidence auto-void. Original: " + reason
-                if outcome not in [Outcome.YES, Outcome.NO, Outcome.VOID]:
-                    outcome = "void"
-                    reason = "Invalid AI outcome voided"
-            else:
-                outcome = "void"
-                reason = "AI parse error voided"
+            parsed = json.loads(raw) if isinstance(raw, str) else raw
+            settlement = self._settlement_policy(parsed)
         except Exception:
             m.status = MarketStatus.VOIDED
             m.resolver_note = "AI parse error voided"
             m.resolver_confidence = "low"
             self.markets[market_id] = m
             return
-        m.outcome = outcome
+        m.outcome = settlement["outcome"]
         m.status = MarketStatus.RESOLVED
         m.resolved_at = self._now()
-        m.resolver_note = reason
-        m.resolver_confidence = conf
-        m.resolver_sources = sources
+        m.resolver_note = settlement["reason"]
+        m.resolver_confidence = settlement["confidence"]
+        m.resolver_sources = settlement["sources_checked"]
         self.markets[market_id] = m
 
     @gl.public.write
@@ -351,7 +361,7 @@ class RealityBet(gl.Contract):
         m = self._get_market(market_id)
         if not m.status == MarketStatus.RESOLVED:
             raise gl.vm.UserError("Can only dispute resolved")
-        if not self._now() <= u256(int(m.resolved_at) + 86400):
+        if not self._now() < u256(int(m.resolved_at) + 86400):
             raise gl.vm.UserError("Dispute window is 24h")
         sender = gl.message.sender_address
         found = False

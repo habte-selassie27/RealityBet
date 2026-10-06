@@ -19,9 +19,10 @@
 hallucinated number could drain pools.
 
 **Mitigation.** `_resolve` extracts only `outcome`, `confidence`, `reason` (≤500 chars),
-`sources` (lines 296-308) — all strings, written to `resolver_*` fields. The payout path
-(`claim_winnings`, lines 217-234) reads only `b.amount`, `m.pool_*`, `m.fee_bps`,
-`m.outcome`. `scripts/preflight.py` check 06 asserts every `emit_transfer(value=...)`
+`sources` — all strings, written to `resolver_*` fields (`_settlement_policy`,
+lines 267-293; storage write 334-339). The payout path
+(`claim_winnings`, lines 221-239) reads only `b.amount`, `m.pool_*`, `m.fee_bps`,
+`m.outcome`. `scripts/preflight.py` check 08 asserts every `emit_transfer(value=...)`
 in the file is `fee`, `payout`, or the original stake.
 
 **Residual.** None found: there is no path from a model string to a transfer amount.
@@ -30,9 +31,10 @@ in the file is `fee`, `payout`, or the original stake.
 
 **Vector.** Reply is not JSON, has the wrong shape, invents an outcome, or hedges.
 
-**Mitigation.** Deterministic normalization (lines 291-329) fails toward `void`:
-unparseable → market `VOIDED` (318-323); unknown outcome → `void` (312-314);
-`confidence: low` → `void` (309-311). `void` refunds every stake in full (line 218).
+**Mitigation.** Deterministic normalization (lines 267-293) fails toward `void`:
+non-dict reply → `void` payload (272-274); unknown outcome → `void` (290-292);
+`confidence: low` → `void` (287-289); consensus string that is not JSON → market
+`VOIDED` (328-333). `void` refunds every stake in full (line 223-224).
 
 **Residual.** A *confidently wrong* high-confidence answer is not detectable here —
 that is what the dispute window is for (below).
@@ -42,11 +44,47 @@ that is what the dispute window is for (below).
 **Vector.** Model answers `yes` on thin evidence; contract settles money anyway.
 
 **Mitigation.** `confidence == low` rewrites any non-void outcome to `void` and keeps
-the original reason in `resolver_note` (309-311). Covered by the direct-VM test
-`test_resolve_void_refunds`-adjacent low-confidence case and preflight check 16.
+the original reason in `resolver_note` (287-289). The rewrite runs **inside `_fetch`,
+before the comparative check**, so it is part of what validators agree on rather than a
+post-consensus surprise; the comparative rule additionally requires exact equality on
+`confidence` (321-324), so no round can settle on two payloads that would store
+different confidences. Covered by the direct-VM test `test_low_confidence_voids` and
+preflight checks 05, 06, 18.
 
 **Residual.** The model can *overstate* its confidence. There is no calibration beyond
 the model's own label.
+
+## Threat: claim before finality (appeal vs payout)
+
+**Vector.** A bettor claims against a provisional `RESOLVED` outcome, then a dispute
+overturns it — the winning side under the *new* outcome claims too, and both sides
+draw from the same pool.
+
+**Mitigation.** Three gates in `claim_winnings` (lines 215-220) make this impossible:
+
+1. `status == DISPUTED` → revert `Market under dispute` — an open appeal blocks every
+   claim, on both sides.
+2. `status == RESOLVED` → required; `DISPUTED` never satisfies it.
+3. `now >= resolved_at + 86400` → revert `Dispute window not closed` — claims open only
+   after the window closes.
+
+The boundaries are **disjoint**: `raise_dispute` requires `now < resolved_at + 86400`
+(line 364) while claims require `now >= resolved_at + 86400` (line 219). At the exact
+boundary second a claim is admissible and a dispute is not, regardless of transaction
+order, so no claim can be followed by an appeal. An **upheld** ruling re-stamps
+`resolved_at` (line 399), reopening a full window before anything can be claimed; a
+**rejected** ruling leaves `resolved_at` alone, and the original window still applies.
+Covered by `test_claim_blocked_until_dispute_window_closes`,
+`test_appeal_cannot_make_both_sides_claimable`, and preflight check 21.
+
+**Residual.** If the owner never rules on a dispute the market stays `DISPUTED` and
+claims stay blocked — value is locked, not stolen. The owner is the only liveness
+backstop (same trust assumption as `force_resolve`).
+
+**Why `refund_void` is not gated.** It requires `status == VOIDED`, which is terminal:
+`void_market` only runs pre-outcome (OPEN/LOCKED), and `raise_dispute` only accepts
+`RESOLVED`. A `VOIDED` market can never be appealed, so its refunds cannot conflict
+with anything.
 
 ## Threat: prompt injection through the market's source page
 
@@ -57,8 +95,8 @@ the model's own label.
 **Mitigation.** The injected text can only influence the *outcome string*; it can never
 reach a transfer amount. Everything is observable: prompt, `resolver_note`,
 `resolver_sources`, `resolved_at` are stored and returned by `get_market`. A wrong
-outcome is appealable for 24h by any bettor (line 354), and the owner can
-`re_resolve`/`force_resolve`. Preflight check 11 caps the body at 6000 chars (line 280),
+outcome is appealable for 24h by any bettor (line 364), and the owner can
+`re_resolve`/`force_resolve`. Preflight check 14 caps the body at 6000 chars (line 313),
 so the page cannot blow up prompt size.
 
 **Residual.** If every validator fetches the same poisoned page they will agree —
@@ -72,10 +110,10 @@ get bettors to stake real GEN on it. This contract does **not** verify that
 **Vector.** Leader sees `yes`, validators see a page that just flipped to `no`, or a
 fetch times out.
 
-**Mitigation.** The comparative rule requires `outcome` equality (289); disagreement
-aborts the round with **no state change**. The market stays `LOCKED` and can be
-re-attempted (`re_resolve`) or explicitly overridden (`force_resolve`).
-Failing-to-agree is strictly safer than agreeing on a stale snapshot.
+**Mitigation.** The comparative rule requires exact equality on `outcome` *and*
+`confidence` (321-324); disagreement aborts the round with **no state change**. The
+market stays `LOCKED` and can be re-attempted (`re_resolve`) or explicitly overridden
+(`force_resolve`). Failing-to-agree is strictly safer than agreeing on a stale snapshot.
 
 **Residual.** A market whose source is permanently flapping may need `force_resolve`.
 
@@ -84,30 +122,25 @@ Failing-to-agree is strictly safer than agreeing on a stale snapshot.
 **Vector.** `claim_winnings` and `refund_void` move value; a recipient that can run code
 during a transfer might re-enter and claim twice.
 
-**Mitigation.** Betstor-facing transfers are ordered checks-effects-interactions: in
-`claim_winnings`, `b.claimed = True` and the storage write happen at lines 231-232,
-*before* the bettor transfer at 234; in `refund_void` at 247-248, before 249. The
-re-entrant call then sees `claimed == True` and reverts `Already claimed`
-(preflight check 07).
+**Mitigation.** Both functions are ordered checks-effects-interactions for **every**
+leg: in `claim_winnings`, `b.claimed = True` and the storage write happen at lines
+234-235, *before* the fee transfer (236-237) and the bettor transfer (238-239); in
+`refund_void` at 252-253, before 254. The re-entrant call then sees `claimed == True`
+and reverts `Already claimed` (preflight check 09 enforces that no `emit_transfer` in
+either function precedes the `claimed` write — the owner fee leg included).
 
-**Residual — ordering nuance worth knowing.** The **fee** leg is transferred at line
-230, *before* `claimed` is set at 231. If `emit_transfer` ever invoked recipient code
-and the owner were a contract with a hostile fallback, that fallback could re-enter
-`claim_winnings` while `claimed` is still `False` and recurse, with each frame then
-paying the bettor on unwind. On this deployment the owner is an EOA
-(`0x04e0...DB1b`) and the contract holds no owner-controlled callback, so the condition
-does not hold — but **any production fork should move the fee transfer below the
-`claimed` write** (one-line change), and should not assume `emit_transfer` is
-call-free without checking the platform semantics.
+**Residual.** None found in the ordering itself. Do not move any transfer above the
+`claimed` write, and do not assume `emit_transfer` is call-free without checking the
+platform semantics.
 
 ## Threat: owner override abuse
 
 **Vector.** Owner force-settles markets against the evidence, or raises the fee after
 bets are placed.
 
-**Mitigation.** Overrides are attributable: `force_resolve` prefixes `[FORCED]`,
-`resolve_dispute` prefixes `[DISPUTE UPHELD]`/`[DISPUTE REJECTED]` (345, 388, 393), and
-`get_market` exposes the note. `set_fee` is capped at 500 bps (557), and the fee is
+**Mitigation.** Overrides are attributable: `force_resolve` prefixes `[FORCED]` (355),
+`resolve_dispute` prefixes `[DISPUTE UPHELD]`/`[DISPUTE REJECTED]` (398, 403), and
+`get_market` exposes the note. `set_fee` is capped at 500 bps (567), and the fee is
 **copied into each market at creation** (line 135) — later `set_fee` calls cannot change
 the fee of a market that already exists.
 
@@ -118,8 +151,8 @@ deployment decision, not a code property.
 
 **Vector.** `transfer_ownership` called by an impostor, or the owner key leaks.
 
-**Mitigation.** Every owner method checks `sender == self.owner` first (334, 374, 402,
-557/566 area) and reverts `Only owner`. Signing happens in the local encrypted keystore
+**Mitigation.** Every owner method checks `sender == self.owner` first (344, 384, 412,
+568, 577) and reverts `Only owner`. Signing happens in the local encrypted keystore
 (`~/.genlayer/keystores`), never in the CLI arguments.
 
 **Residual.** A leaked owner key grants `force_resolve`/`set_fee`/`transfer_ownership`.
@@ -130,24 +163,27 @@ No multi-sig, timelock, or two-step transfer exists — that is a non-goal below
 **Vector.** Non-bettors spam disputes; a bettor disputes repeatedly; disputes arrive
 after the window.
 
-**Mitigation.** `raise_dispute` requires `status == RESOLVED` (352), a bet by the sender
-on that market (357-364), and `now <= resolved_at + 86400` (354). Creating the dispute
-sets `status = DISPUTED` (368), so a second dispute fails the status check. Only the
-owner rules (374) and only once (379).
+**Mitigation.** `raise_dispute` requires `status == RESOLVED` (362), `now < resolved_at + 86400`
+(364), and a bet by the sender on that market (366-374). Creating the dispute sets
+`status = DISPUTED` (378), so a second dispute fails the status check, and every claim
+fails on the same flag until the owner rules. Only the owner rules (384) and only once
+(389). The window is strictly bounded while the claim gate uses the inclusive
+complement (`>=` at line 219), so dispute and claim eligibility can never hold at the
+same instant.
 
 **Residual — window reset asymmetry.** When a dispute is **upheld**, `resolved_at` is
-re-stamped (389), re-opening a fresh 24h window on the new outcome; when it is
-**rejected**, `resolved_at` is left alone, so the original window keeps running. That
-is safe in both directions (an upheld change deserves its own appeal window), but a
-client tracking "window closed" must re-read `resolved_at` after every ruling rather
-than caching it.
+re-stamped (399), re-opening a fresh 24h window on the new outcome; when it is
+**rejected**, `resolved_at` is left alone, so the original window keeps running — but
+claims stay blocked for the whole time the market is `DISPUTED`. That is safe in both
+directions (an upheld change deserves its own appeal window), but a client tracking
+"window closed" must re-read `resolved_at` after every ruling rather than caching it.
 
 ## Threat: griefing through permissionless transitions
 
 **Vector.** Anyone can call `lock_market` / `request_resolution` / `void_market`.
 
 **Mitigation.** All three are time- or role-gated: lock needs `now >= close_time`
-(141-149) and `OPEN`; resolution needs `now >= resolve_time` and `LOCKED` (253-258);
+(141-149) and `OPEN`; resolution needs `now >= resolve_time` and `LOCKED` (258-263);
 `void_market` needs creator-or-owner and pre-outcome status (152-161). Once resolved,
 `request_resolution` cannot be replayed (status check), so LLM rounds are bounded to one
 per lock plus owner-driven `re_resolve`.
@@ -161,12 +197,12 @@ opportunity).
 **Vector.** Millions of markets make list views expensive; unbounded pages let a client
 pull the whole state in one call.
 
-**Mitigation.** `limit` is clamped to 50 (442), `offset` floored at 0 (440), bets are
+**Mitigation.** `limit` is clamped to 50 (452), `offset` floored at 0 (450), bets are
 resolved through `market_bets`/`bettor_bets` indexes instead of scans, and body size /
-note length are bounded (280, 303).
+note length are bounded (313, 280).
 
 **Residual.** `_market_ids` still materializes and sorts *all* market ids per call
-(438-439) — O(n) in market count. Fine at current scale (1 market); a fork expecting
+(448-449) — O(n) in market count. Fine at current scale (1 market); a fork expecting
 heavy growth should add a cursor or a reverse index.
 
 ## Threat: funds that can never leave

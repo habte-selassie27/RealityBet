@@ -210,6 +210,12 @@ def _ast_checks(source: str) -> list[str]:
     assert len(comparative) == 1 and comparative[0][1] == "_resolve", comparative
     checks.append("all non-determinism confined to _fetch inside _resolve (2 nondet + 1 comparative)")
 
+    assert "`outcome` and `confidence` must be exactly the same" in source
+    checks.append("comparative rule binds both settlement fields (outcome + confidence) exactly")
+    policy = [(c, f) for c, _n, f in _calls(tree) if c.endswith("_settlement_policy")]
+    assert {f for _c, f in policy} == {"_fetch", "_resolve"}, policy
+    checks.append("settlement policy runs inside _fetch (pre-consensus) and on the consensus result")
+
     asserts = [node for node in ast.walk(tree) if isinstance(node, ast.Assert)]
     assert not asserts, f"found {len(asserts)} assert statements; user errors must raise gl.vm.UserError"
     user_errors = [node for node in ast.walk(tree) if isinstance(node, ast.Raise)]
@@ -249,15 +255,11 @@ def _ast_checks(source: str) -> list[str]:
         for chain, call, _scope in _calls(fn):
             if not chain.endswith("emit_transfer"):
                 continue
-            value = next((kw.value for kw in call.keywords if kw.arg == "value"), None)
-            label = _chain(value) if value is not None else ""
-            if label in ("fee",):
-                continue
             assert call.lineno > claimed[0], (
-                f"{fn.name}: stake/payout transfer at line {call.lineno} runs before "
+                f"{fn.name}: transfer at line {call.lineno} runs before "
                 f"claimed is set at line {claimed[0]}"
             )
-    checks.append("bettor-facing transfers (payout, refund) happen after claimed is set")
+    checks.append("every transfer (fee, payout, refund) happens after claimed is set")
 
     assert "u256(150)" in source and "u256(500)" in source
     checks.append("fee defaults to 150 bps and is hard-capped at 500 bps")
@@ -477,6 +479,8 @@ def check_payouts(mod) -> str:
     mod.gl.message.sender_address = _Address(BOB)
     _expect(lambda: contract.claim_winnings(bid_yes), "Not your bet")
     mod.gl.message.sender_address = _Address(ALICE)
+    _expect(lambda: contract.claim_winnings(bid_yes), "Dispute window not closed")
+    _warp(mod, "2026-01-02T00:40:00Z")
     payout = int(contract.claim_winnings(bid_yes))
     assert payout == 9850, payout
     assert mod.gl.transfers == [(_normalize(OWNER), 150), (_normalize(ALICE), 9850)], mod.gl.transfers
@@ -540,6 +544,34 @@ def check_disputes(mod) -> str:
     _expect(lambda: contract.resolve_dispute(did, True, "yes", "x"), "Already resolved")
     _expect(lambda: contract.get_dispute("d-nope"), "Dispute not found")
     return "dispute flow: bettor-only, 24h window, owner ruling flips outcome, double-resolve blocked"
+
+
+def check_claim_window(mod) -> str:
+    contract = _fresh(mod, OWNER)
+    mid = _open_market(mod, contract)
+    bid = _bet(mod, contract, mid, ALICE, 1000, "yes")
+    _lock_and_reach_resolve(mod, contract, mid)
+    _set_llm('{"outcome": "yes", "confidence": "high", "reason": "ok"}')
+    contract.request_resolution(mid)  # resolved_at = 2026-01-01T00:40:00Z
+
+    mod.gl.message.sender_address = _Address(ALICE)
+    _expect(lambda: contract.claim_winnings(bid), "Dispute window not closed")
+
+    _warp(mod, "2026-01-02T00:39:59Z")  # one second before the boundary
+    _expect(lambda: contract.claim_winnings(bid), "Dispute window not closed")
+    did = contract.raise_dispute(mid, "last-second appeal")
+    _expect(lambda: contract.claim_winnings(bid), "Market under dispute")
+
+    mod.gl.message.sender_address = _Address(OWNER)
+    contract.resolve_dispute(did, False, "", "upheld the AI")  # rejected: resolved_at unchanged
+    mod.gl.message.sender_address = _Address(ALICE)
+    _expect(lambda: contract.claim_winnings(bid), "Dispute window not closed")
+
+    _warp(mod, "2026-01-02T00:40:00Z")  # exactly resolved_at + 86400
+    _expect(lambda: contract.raise_dispute(mid, "too late"), "Dispute window is 24h")
+    payout = int(contract.claim_winnings(bid))
+    assert payout == 985, payout  # gross 1000, fee 15
+    return "claims wait out the 24h window, block while disputed, and open exactly where the dispute window closes"
 
 
 def check_re_resolve(mod) -> str:
@@ -623,6 +655,7 @@ def _behavior_checks(mod) -> list[str]:
         check_resolution,
         check_payouts,
         check_disputes,
+        check_claim_window,
         check_re_resolve,
         check_views,
         check_funding,
@@ -666,14 +699,15 @@ def _view_scenario(mod) -> tuple[dict, str]:
     _warp(mod, "2026-01-01T00:40:00Z")
     market1, prompt = _capture_resolution(mod, contract, mid1, _llm_payload)
 
+    _warp(mod, "2026-01-02T00:40:00Z")  # dispute window closed
     mod.gl.message.sender_address = _Address(ALICE)
     payout = int(contract.claim_winnings(bid_yes))
 
     mid2 = _create(contract, ["crypto", "finance"])
     _bet(mod, contract, mid2, ALICE, 1000, "yes")
-    _warp(mod, "2026-01-01T01:00:00Z")
+    _warp(mod, "2026-01-02T01:00:00Z")
     contract.lock_market(mid2)
-    _warp(mod, "2026-01-01T01:15:00Z")
+    _warp(mod, "2026-01-02T01:15:00Z")
     contract.request_resolution(mid2)
     did = contract.raise_dispute(mid2, "primary source contradicted itself")
 
@@ -798,6 +832,11 @@ def _write_examples(mod, outdir: Path) -> None:
         "Anything that is not `yes`/`no`/`void` is rewritten to `void`; `confidence: low`",
         "rewrites any non-void outcome to `void`. An unparseable response voids the whole",
         "market (`status: voided`).",
+        "",
+        "The same normalization runs **inside `_fetch`, before the comparative check**, so",
+        "validators compare post-policy payloads — the `outcome` and `confidence` they must",
+        "agree on exactly is the final settlement result, not the raw model reply. It runs",
+        "again on the consensus result (idempotently) before anything is written to storage.",
         "",
         "| # | Case | LLM response | Resulting outcome/status | Note |",
         "|---|------|--------------|--------------------------|------|",

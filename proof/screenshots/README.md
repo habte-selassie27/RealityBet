@@ -40,7 +40,7 @@ mechanical, and each one is itself evidence that the contract's guards work:
 
 Publishing those would read as "these methods are broken" rather than "these methods are
 guarded, and here is the CLI limitation that prevented exercising them". The paths they
-were meant to demonstrate are covered instead by the 17 direct-VM tests, where
+were meant to demonstrate are covered instead by the 19 direct-VM tests, where
 `direct_vm.value` and the sender address are set per test.
 
 Raw CLI error dumps are never committed: the read-error output embeds a node's

@@ -31,6 +31,11 @@ Anything that is not `yes`/`no`/`void` is rewritten to `void`; `confidence: low`
 rewrites any non-void outcome to `void`. An unparseable response voids the whole
 market (`status: voided`).
 
+The same normalization runs **inside `_fetch`, before the comparative check**, so
+validators compare post-policy payloads — the `outcome` and `confidence` they must
+agree on exactly is the final settlement result, not the raw model reply. It runs
+again on the consensus result (idempotently) before anything is written to storage.
+
 | # | Case | LLM response | Resulting outcome/status | Note |
 |---|------|--------------|--------------------------|------|
 | 1 | happy path — high confidence settles the market | `{"outcome": "yes", "confidence": "high", "reason": "BTC closed the year above 100k.", "sources_checked": ["https://coinmarketcap.com/currencies/bitcoin/"]}` | `yes` / `resolved` | BTC closed the year above 100k. |

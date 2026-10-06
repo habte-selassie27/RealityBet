@@ -18,8 +18,8 @@ genlayer call $C get_odds         --args "$MID"     # implied %, pools, total
 
 Ids are `m<seq>-<timestamp>` / `b<seq>-<timestamp>` / `d<seq>-<timestamp>`. Both list
 views are newest-first and numerically ordered (`m10` sorts after `m2` — `_seq`,
-contracts/RealityBet.py:429), but **an id string itself is not sortable**: parse the
-`<seq>` if you sort client-side. `limit` is clamped to 50 (line 442); `offset` is
+contracts/RealityBet.py:439), but **an id string itself is not sortable**: parse the
+`<seq>` if you sort client-side. `limit` is clamped to 50 (line 452); `offset` is
 never negative.
 
 For a page of markets, use `get_markets_page`, not N× `get_market` — it batches full
@@ -74,18 +74,24 @@ genlayer call  $C get_market         --args "$MID"   # status/outcome/resolver_*
 Then, depending on `status`:
 
 - `resolved` + `outcome in {yes,no}` → winners call `claim_winnings <bet_id>` (once;
-  reverts `Already claimed`).
+  reverts `Already claimed`) — **but only after the 24h dispute window closes**:
+  `claim_winnings` reverts `Dispute window not closed` while
+  `now < resolved_at + 86400`, and `Market under dispute` whenever an appeal is open.
 - `resolved` + `outcome == void` → also `claim_winnings`: the void branch pays the full
-  stake back with no fee (line 218).
+  stake back with no fee (line 224), under the same window gate.
 - `voided` (parse error, or `void_market`) → `refund_void <bet_id>`; that path exists
-  only for the `VOIDED` status (line 245).
-- Within 24h of `resolved_at` a bettor may `raise_dispute <MID> "<reason>"`; status
-  becomes `disputed`. Owner then `resolve_dispute <DID> <true|false> <outcome> <note>`
-  or `re_resolve <MID>` (re-runs the model).
+  only for the `VOIDED` status (line 250) and carries no window — `VOIDED` cannot be
+  disputed.
+- Within 24h of `resolved_at` (**strictly**: `now < resolved_at + 86400`, line 364) a
+  bettor may `raise_dispute <MID> "<reason>"`; status becomes `disputed`, which also
+  blocks every claim. Owner then `resolve_dispute <DID> <true|false> <outcome> <note>`
+  or `re_resolve <MID>` (re-runs the model). An **upheld** ruling re-stamps
+  `resolved_at`, restarting the full window before anything can be claimed.
 
-Treat a resolution as **provisional for 24 hours** (line 354). A UI that pays out or
-marks positions final before the dispute window closes is wrong even when the contract
-is right.
+The contract itself refuses to pay before finality — a resolution is provisional until
+`resolved_at + 24h`, claims and disputes are gated on disjoint boundaries of that
+instant, and an open dispute blocks claims outright. A UI that pays out or marks
+positions final earlier is wrong even when the contract would have accepted the call.
 
 ## Consumer pattern: inspect an audit trail
 
@@ -120,8 +126,10 @@ wallet; only `genlayer account` commands take `--account`. See the signing secti
 2. **Never compute money from model output.** Read pools/`fee_bps` from `get_odds` /
    `get_market`, or replay the formula in [README §5](../README.md#5-money) with
    integers.
-3. **Gate claims on both `status` and `claimed`.** The contract enforces them; your UI
-   should not offer a button the chain will reject.
+3. **Gate claims on `status`, `claimed`, and the dispute window.** The contract enforces
+   all three (`RESOLVED` + not `DISPUTED` + `now >= resolved_at + 86400`); your UI
+   should not offer a button the chain will reject. Re-read `resolved_at` after any
+   dispute ruling — an upheld ruling restarts the window.
 4. **Assume reverts.** Every failure is `gl.vm.UserError` with a short message surfaced
    through the CLI as `Market not found`, `Only owner`, `Betting closed`, etc. Match on
    the message, not on an error code.

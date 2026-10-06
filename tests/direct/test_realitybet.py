@@ -33,6 +33,11 @@ def _mock_resolution(direct_vm, outcome, confidence="high"):
     }))
 
 
+def _warp_past_dispute_window(direct_vm):
+    """Resolution runs at 2025-01-01T01:00:00Z; claims open exactly 24h later."""
+    direct_vm.warp("2025-01-02T01:00:00Z")
+
+
 def test_create_market(direct_vm, direct_deploy, direct_owner):
     direct_vm.sender = direct_owner
     contract = direct_deploy("contracts/RealityBet.py")
@@ -134,6 +139,7 @@ def test_resolve_yes_pays_winner(direct_vm, direct_deploy, direct_owner, direct_
     assert m["outcome"] == "yes"
     assert m["resolver_confidence"] == "high"
     assert "coinmarketcap.com" in m["resolver_sources"]
+    _warp_past_dispute_window(direct_vm)
     direct_vm.sender = direct_alice
     payout = int(contract.claim_winnings(bid_yes))
     # gross=(6000*10000)//6000=10000, fee=10000*150//10000=150, net=9850
@@ -157,6 +163,7 @@ def test_resolve_no_pays_winner(direct_vm, direct_deploy, direct_owner, direct_a
     direct_vm.warp("2025-01-01T01:00:00Z")
     _mock_resolution(direct_vm, "no")
     contract.request_resolution(mid)
+    _warp_past_dispute_window(direct_vm)
     direct_vm.sender = direct_bob
     payout = int(contract.claim_winnings(bid_no))
     # gross=(8000*10000)//8000=10000, fee=150, net=9850
@@ -177,6 +184,7 @@ def test_resolve_void_refunds(direct_vm, direct_deploy, direct_owner, direct_ali
     _mock_resolution(direct_vm, "void")
     contract.request_resolution(mid)
     assert contract.get_market(mid)["outcome"] == "void"
+    _warp_past_dispute_window(direct_vm)
     direct_vm.sender = direct_alice
     assert int(contract.claim_winnings(bid)) == 5000
 
@@ -198,6 +206,7 @@ def test_low_confidence_voids(direct_vm, direct_deploy, direct_owner, direct_ali
     assert m["outcome"] == "void"
     assert "Low confidence" in m["resolver_note"]
     assert m["resolver_confidence"] == "low"
+    _warp_past_dispute_window(direct_vm)
     direct_vm.sender = direct_alice
     assert int(contract.claim_winnings(bid)) == 1000
 
@@ -215,6 +224,7 @@ def test_duplicate_claim_reverts(direct_vm, direct_deploy, direct_owner, direct_
     direct_vm.warp("2025-01-01T01:00:00Z")
     _mock_resolution(direct_vm, "yes")
     contract.request_resolution(mid)
+    _warp_past_dispute_window(direct_vm)
     direct_vm.sender = direct_alice
     contract.claim_winnings(bid)
     with direct_vm.expect_revert("Already claimed"):
@@ -262,6 +272,7 @@ def test_loser_gets_zero(direct_vm, direct_deploy, direct_owner, direct_alice, d
     direct_vm.warp("2025-01-01T01:00:00Z")
     _mock_resolution(direct_vm, "yes")
     contract.request_resolution(mid)
+    _warp_past_dispute_window(direct_vm)
     direct_vm.sender = direct_bob
     assert int(contract.claim_winnings(bid_no)) == 0
 
@@ -285,6 +296,7 @@ def test_fee_split(direct_vm, direct_deploy, direct_owner, direct_alice, direct_
     _mock_resolution(direct_vm, "yes")
     contract.request_resolution(mid)
     assert contract.get_market(mid)["fee_bps"] == 200
+    _warp_past_dispute_window(direct_vm)
     direct_vm.sender = direct_alice
     payout = int(contract.claim_winnings(bid_yes))
     # gross=(3000*4000)//3000=4000, fee=4000*200//10000=80, net=3920
@@ -368,3 +380,77 @@ def test_bets_by_bettor_matches_raw_and_hex(direct_vm, direct_deploy, direct_own
 
     assert [b["id"] for b in contract.get_bets_by_bettor("0x" + direct_bob.hex())] == [bid_no]
     assert contract.get_bets_by_bettor("0xdeadbeef") == []
+
+
+def test_claim_blocked_until_dispute_window_closes(direct_vm, direct_deploy, direct_owner, direct_alice):
+    """Claims open exactly at resolved_at + 86400; the dispute window closes on the
+    same instant (strictly), so no appeal can be filed after a payout."""
+    direct_vm.sender = direct_owner
+    contract = direct_deploy("contracts/RealityBet.py")
+    mid = _setup_open_market(direct_vm, contract)
+    direct_vm.sender = direct_alice
+    direct_vm.value = 1000
+    bid = contract.place_bet(mid, "yes")
+    direct_vm.value = 0
+    direct_vm.warp("2025-01-01T00:20:00Z")
+    contract.lock_market(mid)
+    direct_vm.warp("2025-01-01T01:00:00Z")
+    _mock_resolution(direct_vm, "yes")
+    with direct_vm.expect_revert("Market not resolved"):
+        contract.claim_winnings(bid)
+    contract.request_resolution(mid)
+
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("Dispute window not closed"):
+        contract.claim_winnings(bid)
+    direct_vm.warp("2025-01-02T00:59:59Z")
+    with direct_vm.expect_revert("Dispute window not closed"):
+        contract.claim_winnings(bid)
+
+    direct_vm.warp("2025-01-02T01:00:00Z")
+    with direct_vm.expect_revert("Dispute window is 24h"):
+        contract.raise_dispute(mid, "too late")
+    assert int(contract.claim_winnings(bid)) == 985
+
+
+def test_appeal_cannot_make_both_sides_claimable(direct_vm, direct_deploy, direct_owner, direct_alice, direct_bob):
+    """An appeal flips the outcome only while no side has been paid: claims are
+    blocked while disputed, and the ruling restarts the 24h window."""
+    direct_vm.sender = direct_owner
+    contract = direct_deploy("contracts/RealityBet.py")
+    mid = _setup_open_market(direct_vm, contract)
+    direct_vm.sender = direct_alice
+    direct_vm.value = 1000
+    bid_yes = contract.place_bet(mid, "yes")
+    direct_vm.value = 0
+    direct_vm.sender = direct_bob
+    direct_vm.value = 1000
+    bid_no = contract.place_bet(mid, "no")
+    direct_vm.value = 0
+    direct_vm.warp("2025-01-01T00:20:00Z")
+    contract.lock_market(mid)
+    direct_vm.warp("2025-01-01T01:00:00Z")
+    _mock_resolution(direct_vm, "yes")
+    contract.request_resolution(mid)
+
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("Dispute window not closed"):
+        contract.claim_winnings(bid_yes)
+    did = contract.raise_dispute(mid, "source misread")
+    with direct_vm.expect_revert("Market under dispute"):
+        contract.claim_winnings(bid_yes)
+    direct_vm.sender = direct_bob
+    with direct_vm.expect_revert("Market under dispute"):
+        contract.claim_winnings(bid_no)
+
+    direct_vm.sender = direct_owner
+    contract.resolve_dispute(did, True, "no", "manual review")
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("Dispute window not closed"):
+        contract.claim_winnings(bid_yes)
+
+    _warp_past_dispute_window(direct_vm)
+    assert int(contract.claim_winnings(bid_yes)) == 0
+    direct_vm.sender = direct_bob
+    # gross=(1000*2000)//1000=2000, fee=2000*150//10000=30, net=1970
+    assert int(contract.claim_winnings(bid_no)) == 1970
