@@ -3,7 +3,7 @@
 Deployed contract (Studio, studionet):
 
 ```
-0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177
+0x0905C1CE5680AF08354ADF09254AE86fDF66E72D
 ```
 
 The deployed code is byte-identical to [`contracts/RealityBet.py`](contracts/RealityBet.py)
@@ -16,7 +16,7 @@ genlayer network set studionet
 genlayer config get          # activeAccount + rpc_url
 genlayer account list        # funded accounts
 
-C=0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177
+C=0x0905C1CE5680AF08354ADF09254AE86fDF66E72D
 ```
 
 ## Argument syntax
@@ -147,7 +147,7 @@ const client = createClient({
 });
 
 const hash = await client.writeContract({
-  address: "0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177",
+  address: "0x0905C1CE5680AF08354ADF09254AE86fDF66E72D",
   functionName: "place_bet",
   args: [process.env.MARKET_ID, "yes"],
   value: 1_000_000_000_000_000_000n, // 1 GEN

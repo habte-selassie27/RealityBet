@@ -15,7 +15,7 @@ stored state.
 ## Why two sources
 
 `smoke-read-transcript.txt` is a **live** capture: `genlayer call` against
-`0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177`. It covered 11 of the 12 views; `get_bet`
+`0x0905C1CE5680AF08354ADF09254AE86fDF66E72D`. It covered 11 of the 12 views; `get_bet`
 and `get_dispute` are reported as `skipped` because no bet or dispute exists on chain
 (the CLI cannot place a bet — `place_bet` is payable). Pass `MID`/`BID`/`DID`/`BETTOR`
 to exercise them once bets exist.

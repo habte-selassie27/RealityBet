@@ -1,11 +1,11 @@
 {
   "note": "Read-only state capture from the deployed contract. Every value is the literal output of the listed genlayer command; nothing was written to the chain.",
   "network": "studionet",
-  "contract_address": "0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177",
+  "contract_address": "0x0905C1CE5680AF08354ADF09254AE86fDF66E72D",
   "captured_at": "2026-09-28T13:55:31Z",
   "reads": {
     "get_platform_stats": {
-      "command": "genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_platform_stats",
+      "command": "genlayer call 0x0905C1CE5680AF08354ADF09254AE86fDF66E72D get_platform_stats",
       "exit_code": 0,
       "result": {
         "fee_bps": 150,
@@ -15,14 +15,14 @@
       }
     },
     "get_market_ids(0, 10)": {
-      "command": "genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_market_ids --args 0 10",
+      "command": "genlayer call 0x0905C1CE5680AF08354ADF09254AE86fDF66E72D get_market_ids --args 0 10",
       "exit_code": 0,
       "result": [
         "m0-1790603379"
       ]
     },
     "get_markets_page(0, 10)": {
-      "command": "genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_markets_page --args 0 10",
+      "command": "genlayer call 0x0905C1CE5680AF08354ADF09254AE86fDF66E72D get_markets_page --args 0 10",
       "exit_code": 0,
       "result": [
         {
@@ -51,7 +51,7 @@
     }
   },
   "expected_revert": {
-    "command": "genlayer call 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 get_market --args m-does-not-exist",
+    "command": "genlayer call 0x0905C1CE5680AF08354ADF09254AE86fDF66E72D get_market --args m-does-not-exist",
     "exit_code": 1,
     "decoded_error": "Market not found",
     "note": "CLI error output also embeds node_config (including a validator private key); it is deliberately not reproduced here."

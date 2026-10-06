@@ -15,7 +15,7 @@ only the decoded `gl.vm.UserError` string is kept.
 
 ## Deployment
 
-`0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177` on StudioNet, owner
+`0x0905C1CE5680AF08354ADF09254AE86fDF66E72D` on StudioNet, owner
 `0x04e0353B7218b66D6803725ce7342E6e1225DB1b` (the deployer — `__init__` assigns
 `self.owner = gl.message.sender_address`).
 
@@ -35,7 +35,7 @@ at capture time, except for one extra trailing newline:
 Verify yourself (must be clean again after the next deploy):
 
 ```bash
-genlayer code 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 | diff - contracts/RealityBet.py
+genlayer code 0x0905C1CE5680AF08354ADF09254AE86fDF66E72D | diff - contracts/RealityBet.py
 ```
 
 The deploy transaction hash was never recorded in this repository (Studio UI deploy),
@@ -44,7 +44,7 @@ so `deployment_tx` is `null` rather than an invented value.
 ## Reproducing
 
 ```bash
-C=0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177
+C=0x0905C1CE5680AF08354ADF09254AE86fDF66E72D
 date -u +%Y-%m-%dT%H:%M:%SZ      # captured_at
 genlayer call $C get_platform_stats
 genlayer call $C get_market_ids        --args 0 10

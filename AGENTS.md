@@ -66,7 +66,7 @@ user-facing failure (never `assert`), snake_case storage fields on the dataclass
    reaching consensus.
 8. **Known flaw:** `fund_market` splits funds across both pools with no bet attached, so
    it corrupts the parimutuel ratio and is unclaimable. It is in the deployed contract at
-   `0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177`, so it cannot be deleted without
+   `0x0905C1CE5680AF08354ADF09254AE86fDF66E72D`, so it cannot be deleted without
    redeploying and re-pointing the evidence links.
 
 ## Editing the contract

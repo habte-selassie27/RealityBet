@@ -15,8 +15,8 @@ bot, another contract) can be built on the views below.
 |---|---|
 | Contract | [`contracts/RealityBet.py`](contracts/RealityBet.py) — 580 lines, single storage class |
 | Tests | [`tests/direct/test_realitybet.py`](tests/direct/test_realitybet.py) — 19 direct-VM tests |
-| Deployed (Studio, studionet) | `0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177` |
-| Explorer | https://explorer-studio.genlayer.com/address/0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 |
+| Deployed (Studio, studionet) | `0x0905C1CE5680AF08354ADF09254AE86fDF66E72D` |
+| Explorer | https://explorer-studio.genlayer.com/address/0x0905C1CE5680AF08354ADF09254AE86fDF66E72D |
 | Reference client (separate) | https://reality-bet.vercel.app |
 | Calling it | [`COMMANDS.md`](COMMANDS.md) — every view and method as a `genlayer call` / `genlayer write` command |
 | Deep-dive docs | [`docs/`](docs/) — [ARCHITECTURE](docs/ARCHITECTURE.md), [CONSENSUS](docs/CONSENSUS.md), [INTEGRATION](docs/INTEGRATION.md), [THREAT_MODEL](docs/THREAT_MODEL.md) |

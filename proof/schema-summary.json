@@ -1,9 +1,9 @@
 {
   "note": "Parsed from `genlayer schema` output for the deployed contract; the 12/14/2 counts are cross-checked by the AST assertions in scripts/preflight.py.",
   "network": "studionet",
-  "contract_address": "0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177",
+  "contract_address": "0x0905C1CE5680AF08354ADF09254AE86fDF66E72D",
   "captured_at": "2026-09-28T13:55:31Z",
-  "command": "genlayer schema 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177",
+  "command": "genlayer schema 0x0905C1CE5680AF08354ADF09254AE86fDF66E72D",
   "totals": {
     "methods": 26,
     "views": 12,

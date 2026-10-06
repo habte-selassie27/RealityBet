@@ -1,6 +1,6 @@
 # Screenshots — deployed contract on Studio (studionet)
 
-Contract `0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177`, captured 2026-09-28. The JSON
+Contract `0x0905C1CE5680AF08354ADF09254AE86fDF66E72D`, captured 2026-09-28. The JSON
 files in the parent directory are the machine-readable equivalents of these captures;
 these images exist so a reviewer can see the raw CLI/IDE output without trusting a
 summary.
@@ -18,7 +18,7 @@ summary.
 The single check that ties source to deployment:
 
 ```bash
-genlayer code 0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177 | diff - contracts/RealityBet.py
+genlayer code 0x0905C1CE5680AF08354ADF09254AE86fDF66E72D | diff - contracts/RealityBet.py
 ```
 
 ## What is deliberately not shown here

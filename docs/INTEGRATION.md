@@ -1,13 +1,13 @@
 # RealityBet Integration Guide
 
-Contract: `0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177` (StudioNet).
+Contract: `0x0905C1CE5680AF08354ADF09254AE86fDF66E72D` (StudioNet).
 Full command reference: [COMMANDS.md](../COMMANDS.md). Method counts and payable flags:
 [proof/schema-summary.json](../proof/schema-summary.json).
 
 ## Consumer pattern: read before you write
 
 ```bash
-C=0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177
+C=0x0905C1CE5680AF08354ADF09254AE86fDF66E72D
 
 genlayer call $C get_platform_stats                 # fee_bps, owner, totals
 genlayer call $C get_market_ids   --args 0 10       # newest first, cap 50
@@ -45,7 +45,7 @@ const client = createClient({
 });
 
 const hash = await client.writeContract({
-  address: "0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177",
+  address: "0x0905C1CE5680AF08354ADF09254AE86fDF66E72D",
   functionName: "place_bet",
   args: [marketId, "yes"],          // side: "yes" | "no"
   value: 1_000_000_000_000_000_000n, // 1 GEN, 18 decimals

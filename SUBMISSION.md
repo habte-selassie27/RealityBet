@@ -53,8 +53,8 @@ rather than hiding it.
 ## Evidence
 - Contract source: https://github.com/habte-selassie27/RealityBet/blob/main/contracts/RealityBet.py
 - Repo: https://github.com/habte-selassie27/RealityBet
-- Deployed (Studio studionet): https://explorer-studio.genlayer.com/address/0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177
-- Studio import: https://studio.genlayer.com/?import-contract=0xe4e87d989ce6Cc4FeaD89273596B6398a26cB177
+- Deployed (Studio studionet): https://explorer-studio.genlayer.com/address/0x0905C1CE5680AF08354ADF09254AE86fDF66E72D
+- Studio import: https://studio.genlayer.com/?import-contract=0x0905C1CE5680AF08354ADF09254AE86fDF66E72D
 - Reference client (separate deployment, not in repo): https://reality-bet.vercel.app
 
 ## Reviewer talking points
