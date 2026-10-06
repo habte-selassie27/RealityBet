@@ -215,7 +215,27 @@ Direct-VM tests with `mock_web` / `mock_llm`, so no network or LLM call is made:
 
 ---
 
-## 8. Possible next steps
+## 8. Screenshots
+
+Studio run-and-debug session:
+
+![Studio run and debug](proof/screenshots/studio-run-and-debug.png)
+
+Create market write:
+
+![write-create-market](proof/screenshots/write-create-market.png)
+![write-create-market receipt](proof/screenshots/write-create-market-receipt.png)
+
+Read views:
+
+![get_market](proof/screenshots/read-get-market.png)
+![get_market_stats](proof/screenshots/read-get-market-stats.png)
+![get_odds](proof/screenshots/read-get-odds.png)
+![get_platform_stats](proof/screenshots/read-get-platform-stats.png)
+
+---
+
+## 9. Possible next steps
 
 - Multi-outcome markets (A/B/C) with a generalized `pools: DynArray[u256]`.
 - Pull-based liquidity instead of the `fund_market` split, removing the caveat in §5.
