@@ -217,21 +217,34 @@ Direct-VM tests with `mock_web` / `mock_llm`, so no network or LLM call is made:
 
 ## 8. Screenshots
 
-Studio run-and-debug session:
+Studio playground running and debugging the contract:
 
-![Studio run and debug](proof/screenshots/studio-run-and-debug.png)
+![Studio playground running and debugging the contract](proof/screenshots/studio-run-and-debug.png)
 
-Create market write:
+Market creation: the `create_market` write submitted from the Studio console:
 
-![write-create-market](proof/screenshots/write-create-market.png)
-![write-create-market receipt](proof/screenshots/write-create-market-receipt.png)
+![create_market write in the Studio console](proof/screenshots/write-create-market.png)
+The same write's transaction receipt, showing it reaching `MAJORITY_AGREE`:
 
-Read views:
+![create_market transaction receipt](proof/screenshots/write-create-market-receipt.png)
 
-![get_market](proof/screenshots/read-get-market.png)
-![get_market_stats](proof/screenshots/read-get-market-stats.png)
-![get_odds](proof/screenshots/read-get-odds.png)
-![get_platform_stats](proof/screenshots/read-get-platform-stats.png)
+Read views: each of these is a `genlayer call` against the deployed contract.
+
+`get_market` — full state of one market (pools, close/resolve times, outcome, market meta):
+
+![get_market view result](proof/screenshots/read-get-market.png)
+
+`get_market_stats` — per-market totals (bet count, volume, status):
+
+![get_market_stats view result](proof/screenshots/read-get-market-stats.png)
+
+`get_odds` — live parimutuel payout odds for YES vs NO:
+
+![get_odds view result](proof/screenshots/read-get-odds.png)
+
+`get_platform_stats` — aggregate counters across all markets:
+
+![get_platform_stats view result](proof/screenshots/read-get-platform-stats.png)
 
 ---
 
